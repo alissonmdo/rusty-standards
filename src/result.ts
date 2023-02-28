@@ -27,10 +27,28 @@ export function Ok<T>(value: T): Result<T> {
   });
   return result;
 }
+export function Err<T>(message: string): Result<T>;
+export function Err<T>(error: Error, message?: string): Result<T>;
+export function Err<T>(
+  errorOrMessage: Error | string,
+  extraMessage?: string
+): Result<T> {
+  const result = (function createResult() {
+    let error: Error;
+    if (errorOrMessage instanceof Error) {
+      error = errorOrMessage;
+      if (extraMessage != undefined) {
+        error.message = `${extraMessage}: ${errorOrMessage.message}`;
+      }
+    } else {
+      // create error stack from caller
+      error = new Error(errorOrMessage);
+      error.stack = error.stack?.split("\n").slice(1).join("\n");
+    }
 
-export function Err<T>(error: Error | string): Result<T> {
-  const err = !(error instanceof Error) ? new Error(String(error)) : error;
-  const result = [null, err] as Result<T>;
+    return [null, error] as Result<T>;
+  })();
+
   Object.defineProperty(result, "_isOfTypeResult", {
     value: true,
     writable: false,
@@ -53,14 +71,14 @@ export function toResult<
   try {
     if (unsafe instanceof Promise) {
       return unsafe.then(
-        value => (IsResult(value) ? value : Ok(value)),
-        err => Err(err as Error | string)
+        (value) => (IsResult(value) ? value : Ok(value)),
+        (err) => Err(err as Error)
       );
     }
     const value = (unsafe as () => T)();
     if (IsResult(value)) return value;
     return Ok(value);
   } catch (err) {
-    return Err(err as Error | string);
+    return Err(err as Error);
   }
 }
