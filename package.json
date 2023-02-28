@@ -1,12 +1,13 @@
 {
   "name": "rusty-standards",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "commonjs",
   "scripts": {
-    "build": "tsc -p ."
+    "build": "tsc -p .",
+    "prepublish": "pnpm run build"
   },
   "devDependencies": {
     "@types/node": "^18.14.1",
