@@ -33,21 +33,17 @@ export function Err<T>(
   errorOrMessage: Error | string,
   extraMessage?: string
 ): Result<T> {
-  const result = (function createResult() {
-    let error: Error;
-    if (errorOrMessage instanceof Error) {
-      error = errorOrMessage;
-      if (extraMessage != undefined) {
-        error.message = `${extraMessage}: ${errorOrMessage.message}`;
-      }
-    } else {
-      // create error stack from caller
-      error = new Error(errorOrMessage);
-      error.stack = error.stack?.split("\n").slice(1).join("\n");
+  let error: Error;
+  if (errorOrMessage instanceof Error) {
+    error = errorOrMessage;
+    if (extraMessage != undefined) {
+      error.message = `${extraMessage}: ${errorOrMessage.message}`;
     }
+  } else {
+    error = new Error(errorOrMessage);
+  }
 
-    return [null, error] as Result<T>;
-  })();
+  const result = [null, error] as Result<T>;
 
   Object.defineProperty(result, "_isOfTypeResult", {
     value: true,
