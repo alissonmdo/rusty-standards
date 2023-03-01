@@ -7,7 +7,7 @@
  * }
  * // use value
  */
-export type Result<T> = ([T, null] | [null, Error]) & {
+export type Result<T> = ([T, null] | [null, ResultError]) & {
   _isOfTypeResult: true;
 };
 
@@ -19,6 +19,22 @@ export function IsResult<T>(result: unknown): result is Result<T> {
   );
 }
 
+export type StacKInfo = {
+  data: unknown;
+  message?: string;
+  at: string;
+};
+export class ResultError extends Error {
+  public info: StacKInfo[] = [];
+  constructor(message: string) {
+    super(message);
+  }
+
+  public addInfo(info: StacKInfo): void {
+    this.info.push(info);
+  }
+}
+
 export function Ok<T>(value: T): Result<T> {
   const result = [value, null] as Result<T>;
   Object.defineProperty(result, "_isOfTypeResult", {
@@ -27,21 +43,24 @@ export function Ok<T>(value: T): Result<T> {
   });
   return result;
 }
-export function Err<T>(message: string): Result<T>;
-export function Err<T>(error: Error, message?: string): Result<T>;
+
 export function Err<T>(
-  errorOrMessage: Error | string,
-  extraMessage?: string
+  errorParam: Error | ResultError | string,
+  info?: Omit<StacKInfo, "at">
 ): Result<T> {
-  let error: Error;
-  if (errorOrMessage instanceof Error) {
-    error = errorOrMessage;
-    if (extraMessage != undefined) {
-      error.message = `${extraMessage}: ${errorOrMessage.message}`;
-    }
+  let error: ResultError;
+  if (errorParam instanceof ResultError) {
+    error = errorParam;
+  } else if (errorParam instanceof Error) {
+    error = new ResultError(errorParam.message);
+    error.stack = errorParam.stack;
   } else {
-    error = new Error(errorOrMessage);
+    error = new ResultError(errorParam);
   }
+  const stack = new Error().stack;
+  // get the second item in the stack
+  const at = stack?.split("\n")[2].trim() ?? "unknown";
+  if (info !== undefined) error.addInfo({ ...info, at });
 
   const result = [null, error] as Result<T>;
 
