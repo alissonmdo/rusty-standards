@@ -1,3 +1,5 @@
+import { isPromise } from "./is-promise";
+
 /**
  * Result monad
  * @example
@@ -8,63 +10,50 @@
  * // use value
  */
 export type Result<T> = ([T, null] | [null, ResultError]) & {
-  _isOfTypeResult: true;
+  __RUSTY_STANDARDS_RESULT: true;
 };
 
-export function IsResult<T>(result: unknown): result is Result<T> {
-  return (
-    (result as Result<T>)?._isOfTypeResult === true &&
-    Array.isArray(result) &&
-    result.length === 2
-  );
+export function isResult<T>(result: Result<T> | unknown): result is Result<T> {
+  return (result as Result<T>)?.__RUSTY_STANDARDS_RESULT === true;
 }
 
-export type StacKInfo = {
-  data: unknown;
-  message?: string;
-  at: string;
-};
-export class ResultError extends Error {
-  public info: StacKInfo[] = [];
-  constructor(message: string) {
-    super(message);
-  }
-
-  public addInfo(info: StacKInfo): void {
-    this.info.push(info);
+export class ResultError {
+  private __RUSTY_STANDARDS_RESULT_ERROR = true;
+  public originalError?: Error;
+  public stack?: string;
+  public message: string;
+  constructor(message: string, originalError?: Error) {
+    this.message = message;
+    this.originalError = originalError;
+    let stack = new Error().stack;
+    // remove last 2 stack frames
+    stack = stack?.split("\n").slice(3).join("\n");
+    this.stack = "ResultError: " + message + "\n" + stack;
   }
 }
-
-export function Ok<T>(value: T): Result<T> {
+export function ok<T>(value: T): Result<T> {
   const result = [value, null] as Result<T>;
-  Object.defineProperty(result, "_isOfTypeResult", {
+  Object.defineProperty(result, "__RUSTY_STANDARDS_RESULT", {
     value: true,
     writable: false,
   });
   return result;
 }
 
-export function Err<T>(
-  errorParam: Error | ResultError | string,
-  info?: Omit<StacKInfo, "at">
+export function err<T>(error: ResultError): Result<T>;
+export function err<T>(message: string, originalError?: Error): Result<T>;
+export function err<T>(
+  errorOrMessage: ResultError | string,
+  originalError?: Error
 ): Result<T> {
-  let error: ResultError;
-  if (errorParam instanceof ResultError) {
-    error = errorParam;
-  } else if (errorParam instanceof Error) {
-    error = new ResultError(errorParam.message);
-    error.stack = errorParam.stack;
-  } else {
-    error = new ResultError(errorParam);
-  }
-  const stack = new Error().stack;
-  // get the second item in the stack
-  const at = stack?.split("\n")[2].trim() ?? "unknown";
-  if (info !== undefined) error.addInfo({ ...info, at });
+  const error =
+    typeof errorOrMessage === "string"
+      ? new ResultError(errorOrMessage, originalError)
+      : errorOrMessage;
 
   const result = [null, error] as Result<T>;
 
-  Object.defineProperty(result, "_isOfTypeResult", {
+  Object.defineProperty(result, "__RUSTY_STANDARDS_RESULT", {
     value: true,
     writable: false,
   });
@@ -72,28 +61,59 @@ export function Err<T>(
   return result;
 }
 
-export function toResult<T>(unsafe: Promise<Result<T>>): Promise<Result<T>>;
-export function toResult<T>(unsafe: Promise<T>): Promise<Result<T>>;
-export function toResult<T>(unsafe: () => Result<T>): Result<T>;
-export function toResult<T>(unsafe: () => T): Result<T>;
-export function toResult<
+export function safe<T>(parameters: {
+  onErrorMessage: string;
+  unsafe: Promise<Result<T>>;
+}): Promise<Result<T>>;
+export function safe<T>(parameters: {
+  onErrorMessage: string;
+  unsafe: Promise<T>;
+}): Promise<Result<T>>;
+export function safe<T>(parameters: {
+  onErrorMessage: string;
+  unsafe: () => Result<T>;
+}): Result<T>;
+export function safe<T>(parameters: {
+  onErrorMessage: string;
+  unsafe: () => T;
+}): Result<T>;
+export function safe<
   T =
     | Promise<Result<unknown>>
     | Promise<unknown>
     | (() => Result<unknown>)
     | (() => unknown)
->(unsafe: T): Promise<Result<unknown>> | Result<unknown> {
+>(parameters: {
+  onErrorMessage: string;
+  unsafe: T;
+}): Promise<Result<unknown>> | Result<unknown> {
+  const { onErrorMessage, unsafe } = parameters;
   try {
-    if (unsafe instanceof Promise) {
-      return unsafe.then(
-        (value) => (IsResult(value) ? value : Ok(value)),
-        (err) => Err(err as Error)
+    if (unsafe === undefined) return err("toResult called with undefined");
+    if (unsafe === null) return err("toResult called with null");
+
+    if (isPromise(unsafe)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (unsafe as any).then(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (value: any) => (isResult(value) ? value : ok(value)),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (error: any) => err(onErrorMessage, error)
       );
     }
     const value = (unsafe as () => T)();
-    if (IsResult(value)) return value;
-    return Ok(value);
-  } catch (err) {
-    return Err(err as Error);
+    if (isResult(value)) {
+      return value;
+    }
+    return ok(value);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    return err(onErrorMessage, error);
   }
+}
+
+export function resultToError(resultError: ResultError): Error {
+  const error = new Error(resultError.message);
+  error.stack = resultError.stack;
+  return error;
 }
