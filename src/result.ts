@@ -31,7 +31,7 @@ export class ResultError {
     this.stack = "ResultError: " + message + "\n" + stack;
   }
 }
-export function ok<T>(value: T): Result<T> {
+export function Ok<T>(value: T): Result<T> {
   const result = [value, null] as Result<T>;
   Object.defineProperty(result, "__RUSTY_STANDARDS_RESULT", {
     value: true,
@@ -40,9 +40,9 @@ export function ok<T>(value: T): Result<T> {
   return result;
 }
 
-export function err<T>(error: ResultError): Result<T>;
-export function err<T>(message: string, originalError?: Error): Result<T>;
-export function err<T>(
+export function Err<T>(error: ResultError): Result<T>;
+export function Err<T>(message: string, originalError?: Error): Result<T>;
+export function Err<T>(
   errorOrMessage: ResultError | string,
   originalError?: Error
 ): Result<T> {
@@ -89,26 +89,26 @@ export function safe<
 }): Promise<Result<unknown>> | Result<unknown> {
   const { onErrorMessage, unsafe } = parameters;
   try {
-    if (unsafe === undefined) return err("toResult called with undefined");
-    if (unsafe === null) return err("toResult called with null");
+    if (unsafe === undefined) return Err("toResult called with undefined");
+    if (unsafe === null) return Err("toResult called with null");
 
     if (isPromise(unsafe)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (unsafe as any).then(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (value: any) => (isResult(value) ? value : ok(value)),
+        (value: any) => (isResult(value) ? value : Ok(value)),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (error: any) => err(onErrorMessage, error)
+        (error: any) => Err(onErrorMessage, error)
       );
     }
     const value = (unsafe as () => T)();
     if (isResult(value)) {
       return value;
     }
-    return ok(value);
+    return Ok(value);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    return err(onErrorMessage, error);
+    return Err(onErrorMessage, error);
   }
 }
 
