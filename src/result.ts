@@ -62,28 +62,22 @@ export function Err<T>(
 }
 
 export function safe<T>(
-  onErrorMessage: string,
+  actionName: string,
   unsafe: () => Promise<Result<T>>
 ): Promise<Result<T>>;
 export function safe<T>(
-  onErrorMessage: string,
+  actionName: string,
   unsafe: () => Promise<T>
 ): Promise<Result<T>>;
-export function safe<T>(
-  onErrorMessage: string,
-  unsafe: () => Result<T>
-): Result<T>;
-export function safe<T>(onErrorMessage: string, unsafe: () => T): Result<T>;
+export function safe<T>(actionName: string, unsafe: () => Result<T>): Result<T>;
+export function safe<T>(actionName: string, unsafe: () => T): Result<T>;
 export function safe<
   T =
     | (() => Promise<Result<unknown>>)
     | (() => Promise<unknown>)
     | (() => Result<unknown>)
     | (() => unknown)
->(
-  onErrorMessage: string,
-  unsafe: T
-): Promise<Result<unknown>> | Result<unknown> {
+>(actionName: string, unsafe: T): Promise<Result<unknown>> | Result<unknown> {
   if (unsafe === undefined) return Err("toResult called with undefined");
   if (unsafe === null) return Err("toResult called with null");
   try {
@@ -95,7 +89,7 @@ export function safe<
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (value: any) => (isResult(value) ? value : Ok(value)),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (error: any) => Err(onErrorMessage, error)
+        (error: any) => Err("Failed to " + actionName.trim(), error)
       );
     }
     if (isResult(result)) {
@@ -104,7 +98,7 @@ export function safe<
     return Ok(result);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    return Err(onErrorMessage, error);
+    return Err("Failed to " + actionName.trim(), error);
   }
 }
 
