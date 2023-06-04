@@ -61,33 +61,29 @@ export function Err<T>(
   return result;
 }
 
-export function safe<T>(parameters: {
-  onErrorMessage: string;
-  unsafe: () => Promise<Result<T>>;
-}): Promise<Result<T>>;
-export function safe<T>(parameters: {
-  onErrorMessage: string;
-  unsafe: () => Promise<T>;
-}): Promise<Result<T>>;
-export function safe<T>(parameters: {
-  onErrorMessage: string;
-  unsafe: () => Result<T>;
-}): Result<T>;
-export function safe<T>(parameters: {
-  onErrorMessage: string;
-  unsafe: () => T;
-}): Result<T>;
+export function safe<T>(
+  onErrorMessage: string,
+  unsafe: () => Promise<Result<T>>
+): Promise<Result<T>>;
+export function safe<T>(
+  onErrorMessage: string,
+  unsafe: () => Promise<T>
+): Promise<Result<T>>;
+export function safe<T>(
+  onErrorMessage: string,
+  unsafe: () => Result<T>
+): Result<T>;
+export function safe<T>(onErrorMessage: string, unsafe: () => T): Result<T>;
 export function safe<
   T =
     | (() => Promise<Result<unknown>>)
     | (() => Promise<unknown>)
     | (() => Result<unknown>)
     | (() => unknown)
->(parameters: {
-  onErrorMessage: string;
-  unsafe: T;
-}): Promise<Result<unknown>> | Result<unknown> {
-  const { onErrorMessage, unsafe } = parameters;
+>(
+  onErrorMessage: string,
+  unsafe: T
+): Promise<Result<unknown>> | Result<unknown> {
   if (unsafe === undefined) return Err("toResult called with undefined");
   if (unsafe === null) return Err("toResult called with null");
   try {
