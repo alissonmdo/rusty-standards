@@ -63,11 +63,11 @@ export function Err<T>(
 
 export function safe<T>(parameters: {
   onErrorMessage: string;
-  unsafe: Promise<Result<T>>;
+  unsafe: () => Promise<Result<T>>;
 }): Promise<Result<T>>;
 export function safe<T>(parameters: {
   onErrorMessage: string;
-  unsafe: Promise<T>;
+  unsafe: () => Promise<T>;
 }): Promise<Result<T>>;
 export function safe<T>(parameters: {
   onErrorMessage: string;
@@ -79,8 +79,8 @@ export function safe<T>(parameters: {
 }): Result<T>;
 export function safe<
   T =
-    | Promise<Result<unknown>>
-    | Promise<unknown>
+    | (() => Promise<Result<unknown>>)
+    | (() => Promise<unknown>)
     | (() => Result<unknown>)
     | (() => unknown)
 >(parameters: {
@@ -88,24 +88,24 @@ export function safe<
   unsafe: T;
 }): Promise<Result<unknown>> | Result<unknown> {
   const { onErrorMessage, unsafe } = parameters;
+  if (unsafe === undefined) return Err("toResult called with undefined");
+  if (unsafe === null) return Err("toResult called with null");
   try {
-    if (unsafe === undefined) return Err("toResult called with undefined");
-    if (unsafe === null) return Err("toResult called with null");
-
-    if (isPromise(unsafe)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = (unsafe as any)();
+    if (isPromise(result)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (unsafe as any).then(
+      return (result as any).then(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (value: any) => (isResult(value) ? value : Ok(value)),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (error: any) => Err(onErrorMessage, error)
       );
     }
-    const value = (unsafe as () => T)();
-    if (isResult(value)) {
-      return value;
+    if (isResult(result)) {
+      return result;
     }
-    return Ok(value);
+    return Ok(result);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     return Err(onErrorMessage, error);
