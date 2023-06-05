@@ -12,3 +12,4 @@ export type { Result } from "./result";
 export { Err, isResult, Ok, safe } from "./result";
 export type { Sort, SortBy } from "./sort";
 export { OrderBy } from "./sort";
+export { until } from "./until";
