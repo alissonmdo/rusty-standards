@@ -1,3 +1,4 @@
+export { exists } from "./exists";
 export { isPromise } from "./is-promise";
 export type {
   isNonEmptyString,
