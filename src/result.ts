@@ -9,7 +9,7 @@ import { isPromise } from "./is-promise";
  * }
  * // use value
  */
-export type Result<T> = ([T, null] | [null, ResultError]) & {
+export type Result<T> = ([ResultError, null] | [null, T]) & {
   __RUSTY_STANDARDS_RESULT: true;
 };
 
@@ -32,7 +32,7 @@ export class ResultError {
   }
 }
 export function Ok<T>(value: T): Result<T> {
-  const result = [value, null] as Result<T>;
+  const result = [null, value] as Result<T>;
   Object.defineProperty(result, "__RUSTY_STANDARDS_RESULT", {
     value: true,
     writable: false,
@@ -51,7 +51,7 @@ export function Err<T>(
       ? new ResultError(errorOrMessage, originalError)
       : errorOrMessage;
 
-  const result = [null, error] as Result<T>;
+  const result = [error, null] as Result<T>;
 
   Object.defineProperty(result, "__RUSTY_STANDARDS_RESULT", {
     value: true,
